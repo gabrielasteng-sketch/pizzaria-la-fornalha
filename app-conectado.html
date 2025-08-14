@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>La Fornalha App</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+    <style>
+        html, body { height: 100%; overflow: hidden; }
+        body { font-family: 'Poppins', sans-serif; background-color: #f8fafc; color: #1e293b; }
+        .font-display { font-family: 'Playfair Display', serif; }
+        #app-container { height: 100vh; display: flex; flex-direction: column; }
+        #screen-content { flex-grow: 1; overflow-y: auto; padding-bottom: 80px; }
+        #screen-content::-webkit-scrollbar { display: none; }
+        #screen-content { -ms-overflow-style: none; scrollbar-width: none; }
+        .screen { animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .nav-item.active svg, .nav-item.active span { color: #f59e0b; }
+        .btn-primary { @apply w-full py-4 rounded-xl bg-amber-500 text-slate-900 font-bold text-lg transition-transform duration-300 hover:bg-amber-600 active:scale-95; }
+    </style>
+</head>
+<body>
+
+    <div id="app-container">
+        <main id="screen-content"></main>
+        <nav class="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 flex justify-around h-20 items-center shadow-lg">
+            <button onclick="navigate('home')" class="nav-item flex flex-col items-center justify-center text-slate-500 w-full active">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>
+                <span class="text-xs font-medium">Início</span>
+            </button>
+            <button onclick="navigate('menu')" class="nav-item flex flex-col items-center justify-center text-slate-500 w-full">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h7" /></svg>
+                <span class="text-xs font-medium">Cardápio</span>
+            </button>
+            <button onclick="navigate('cart')" class="nav-item flex flex-col items-center justify-center text-slate-500 w-full relative">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+                <span class="text-xs font-medium">Carrinho</span>
+                <span id="cart-badge" class="absolute top-0 right-6 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center hidden">0</span>
+            </button>
+        </nav>
+    </div>
+
+    <script>
+        // --- ESTADO DO APLICATIVO ---
+        let menuData = [];
+        let cart = [];
+        const API_URL = 'http://localhost:3000'; // Endereço do nosso back-end
+
+        // --- RENDERIZAÇÃO DAS TELAS ---
+        const screenContent = document.getElementById('screen-content');
+
+        const screens = {
+            home: () => `
+                <div class="screen p-6">
+                    <h1 class="font-display text-4xl font-bold mb-2">La Fornalha</h1>
+                    <p class="text-slate-600 text-lg mb-6">A sua pizza favorita, agora no app.</p>
+                    <div class="relative rounded-xl overflow-hidden shadow-lg mb-8">
+                        <img src="https://images.unsplash.com/photo-1594007654729-407eedc4be65?q=80&w=1928&auto=format&fit=crop" class="w-full h-48 object-cover">
+                        <div class="absolute inset-0 bg-black/40 flex flex-col justify-end p-4">
+                            <h2 class="text-white font-bold text-2xl font-display">Sabor que une</h2>
+                            <p class="text-white/90">Peça e receba no conforto da sua casa.</p>
+                        </div>
+                    </div>
+                    <h3 class="text-2xl font-bold mb-4">Pizza em Destaque</h3>
+                    ${menuData.length > 0 ? `
+                    <div class="bg-white rounded-xl shadow-md overflow-hidden flex items-center gap-4 p-4 mb-6">
+                        <img src="${menuData[2].image}" class="w-24 h-24 object-cover rounded-lg">
+                        <div>
+                            <h4 class="font-bold text-lg">${menuData[2].name}</h4>
+                            <p class="text-amber-600 font-bold text-md">R$ ${menuData[2].price.toFixed(2).replace('.', ',')}</p>
+                        </div>
+                    </div>` : '<p>Carregando destaque...</p>'}
+                    <button onclick="navigate('menu')" class="btn-primary">Ver Cardápio Completo</button>
+                </div>
+            `,
+            menu: () => `
+                <div class="screen p-6">
+                    <h1 class="font-display text-4xl font-bold mb-6">Nosso Cardápio</h1>
+                    <div id="menu-list" class="space-y-4">
+                        ${menuData.map(pizza => `
+                            <div class="bg-white rounded-xl shadow-md overflow-hidden flex items-center">
+                                <img src="${pizza.image}" class="w-28 h-28 object-cover">
+                                <div class="p-4 flex-grow">
+                                    <h3 class="font-bold text-lg">${pizza.name}</h3>
+                                    <p class="text-slate-500 text-sm mb-2">${pizza.desc.substring(0, 40)}...</p>
+                                    <div class="flex justify-between items-center">
+                                        <span class="font-bold text-amber-600 text-lg">R$ ${pizza.price.toFixed(2).replace('.', ',')}</span>
+                                        <button onclick="addToCart(${pizza.id})" class="bg-slate-800 text-white rounded-full h-10 w-10 flex items-center justify-center active:bg-slate-900">+</button>
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `,
+            cart: () => {
+                if (cart.length === 0) { return screens.emptyCart(); }
+                const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+                const deliveryFee = 5.00;
+                const total = subtotal + deliveryFee;
+                return `
+                    <div class="screen p-6">
+                        <h1 class="font-display text-4xl font-bold mb-6">Meu Pedido</h1>
+                        <div id="cart-items" class="space-y-4 mb-6">
+                            ${cart.map(item => `
+                                <div class="bg-white rounded-xl shadow-md p-4 flex items-center gap-4">
+                                    <img src="${item.image}" class="w-16 h-16 object-cover rounded-lg">
+                                    <div class="flex-grow">
+                                        <h3 class="font-bold">${item.name}</h3>
+                                        <p class="text-amber-600 font-semibold">R$ ${(item.price * item.quantity).toFixed(2).replace('.', ',')}</p>
+                                    </div>
+                                    <div class="flex items-center gap-3 bg-slate-100 rounded-full p-1">
+                                        <button onclick="updateQuantity(${item.id}, -1)" class="h-6 w-6 rounded-full text-slate-700 font-bold">-</button>
+                                        <span class="font-bold text-lg">${item.quantity}</span>
+                                        <button onclick="updateQuantity(${item.id}, 1)" class="h-6 w-6 rounded-full text-slate-700 font-bold">+</button>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                        <div class="bg-white rounded-xl shadow-md p-4 space-y-2 text-lg">
+                            <div class="flex justify-between"><span>Subtotal</span> <span class="font-semibold">R$ ${subtotal.toFixed(2).replace('.', ',')}</span></div>
+                            <div class="flex justify-between"><span>Taxa de Entrega</span> <span class="font-semibold">R$ ${deliveryFee.toFixed(2).replace('.', ',')}</span></div>
+                            <div class="flex justify-between font-bold text-xl border-t pt-2 mt-2"><span>Total</span> <span>R$ ${total.toFixed(2).replace('.', ',')}</span></div>
+                        </div>
+                        <div class="mt-6">
+                            <button onclick="checkout()" class="btn-primary">Finalizar Pedido</button>
+                        </div>
+                    </div>
+                `;
+            },
+            emptyCart: () => `
+                <div class="screen p-6 flex flex-col items-center justify-center h-full text-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-24 w-24 text-slate-300 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1"><path stroke-linecap="round" stroke-linejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+                    <h1 class="font-display text-3xl font-bold mb-2">Seu carrinho está vazio</h1>
+                    <p class="text-slate-500 mb-6">Adicione pizzas do nosso cardápio para continuar.</p>
+                    <button onclick="navigate('menu')" class="btn-primary w-auto px-8">Ver Cardápio</button>
+                </div>
+            `,
+            confirmation: () => `
+                <div class="screen p-6 flex flex-col items-center justify-center h-full text-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-24 w-24 text-green-500 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    <h1 class="font-display text-3xl font-bold mb-2">Pedido Recebido!</h1>
+                    <p class="text-slate-500 mb-6">Seu pedido foi enviado para a cozinha! Tempo estimado de entrega: 45-60 min.</p>
+                    <button onclick="navigate('home')" class="btn-primary w-auto px-8">Voltar ao Início</button>
+                </div>
+            `
+        };
+
+        // --- LÓGICA DE NAVEGAÇÃO E CARRINHO ---
+        function renderScreen(screenName) {
+            screenContent.innerHTML = screens[screenName]();
+            screenContent.scrollTop = 0;
+            document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+            document.querySelector(`.nav-item[onclick="navigate('${screenName}')"]`).classList.add('active');
+        }
+        
+        async function navigate(screenName) {
+            // Se o menu ainda não foi carregado, busca no back-end primeiro.
+            if (screenName === 'menu' && menuData.length === 0) {
+                await fetchMenu();
+            }
+            renderScreen(screenName);
+        }
+
+        function updateCartBadge() {
+            const badge = document.getElementById('cart-badge');
+            const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
+            if (totalItems > 0) {
+                badge.textContent = totalItems;
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+            }
+        }
+
+        function addToCart(pizzaId) {
+            const existingItem = cart.find(item => item.id === pizzaId);
+            if (existingItem) {
+                existingItem.quantity++;
+            } else {
+                const pizza = menuData.find(p => p.id === pizzaId);
+                cart.push({ ...pizza, quantity: 1 });
+            }
+            updateCartBadge();
+            const addButton = event.target;
+            addButton.innerHTML = '✓';
+            setTimeout(() => { addButton.innerHTML = '+'; }, 1000);
+        }
+
+        function updateQuantity(pizzaId, change) {
+            const itemIndex = cart.findIndex(item => item.id === pizzaId);
+            if (itemIndex > -1) {
+                cart[itemIndex].quantity += change;
+                if (cart[itemIndex].quantity <= 0) {
+                    cart.splice(itemIndex, 1);
+                }
+            }
+            renderScreen('cart');
+            updateCartBadge();
+        }
+        
+        async function checkout() {
+            if (cart.length === 0) return;
+
+            const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+            const deliveryFee = 5.00;
+            const total = subtotal + deliveryFee;
+
+            const orderData = {
+                items: cart.map(item => ({ id: item.id, name: item.name, quantity: item.quantity })),
+                total: total
+            };
+
+            try {
+                const response = await fetch(`${API_URL}/orders`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(orderData)
+                });
+
+                if (!response.ok) throw new Error('Falha ao enviar pedido');
+                
+                const result = await response.json();
+                console.log('Pedido enviado com sucesso:', result);
+
+                cart = [];
+                updateCartBadge();
+                renderScreen('confirmation');
+
+            } catch (error) {
+                console.error('Erro no checkout:', error);
+                alert('Não foi possível completar seu pedido. Tente novamente.');
+            }
+        }
+        
+        // --- FUNÇÕES DE API ---
+        async function fetchMenu() {
+            try {
+                const response = await fetch(`${API_URL}/menu`);
+                if (!response.ok) throw new Error('Não foi possível carregar o cardápio.');
+                menuData = await response.json();
+            } catch (error) {
+                console.error("Erro ao buscar cardápio:", error);
+                screenContent.innerHTML = `<p class="p-6 text-center text-red-500">Erro ao carregar o cardápio. Verifique se o servidor está rodando.</p>`;
+            }
+        }
+
+        // --- INICIALIZAÇÃO DO APP ---
+        window.onload = async () => {
+            await fetchMenu();
+            renderScreen('home');
+        };
+    </script>
+</body>
+</html>
